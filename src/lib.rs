@@ -1432,7 +1432,7 @@ mod test {
 
     #[test]
     fn test_bmi_relative() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x80, // LDA #$80
             0x30, 0x02, // BMI +2
@@ -1456,7 +1456,7 @@ mod test {
 
     #[test]
     fn test_bpl_relative() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x10, // LDA #$10
             0x10, 0x02, // BPL +2
@@ -1468,7 +1468,7 @@ mod test {
 
     #[test]
     fn test_bvc_relative() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0x69, 0x10, // ADC #$10
             0x50, 0x02, // BVC +2
@@ -1480,7 +1480,7 @@ mod test {
 
     #[test]
     fn test_bvs_relative() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x7F, // LDA #$7F
             0x69, 0x01, // ADC #$01
@@ -1493,7 +1493,7 @@ mod test {
 
     #[test]
     fn test_clc_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0x38, // SEC
             0x18, // CLC
@@ -1504,7 +1504,7 @@ mod test {
 
     #[test]
     fn test_cld_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xF8, // SED
             0xD8, // CLD
@@ -1515,7 +1515,7 @@ mod test {
 
     #[test]
     fn test_cli_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0x78, // SEI
             0x58, // CLI
@@ -1526,7 +1526,7 @@ mod test {
 
     #[test]
     fn test_clv_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x7F, // LDA #$7F
             0x69, 0x01, // ADC #$01
@@ -1538,7 +1538,7 @@ mod test {
 
     #[test]
     fn test_cmp_immediate() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x42, // LDA #$42
             0xC9, 0x42, // CMP #$42
@@ -1551,7 +1551,7 @@ mod test {
 
     #[test]
     fn test_cpx_immediate() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA2, 0x10, // LDX #$10
             0xE0, 0x08, // CPX #$08
@@ -1564,7 +1564,7 @@ mod test {
 
     #[test]
     fn test_cpy_immediate() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA0, 0x05, // LDY #$05
             0xC0, 0x08, // CPY #$08
@@ -1577,7 +1577,7 @@ mod test {
 
     #[test]
     fn test_dec_absolute() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x02, // LDA #$02
             0x8D, 0x10, 0x00, // STA $0010
@@ -1592,7 +1592,7 @@ mod test {
 
     #[test]
     fn test_dex_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA2, 0x00, // LDX #0
             0xCA, // DEX
@@ -1605,7 +1605,7 @@ mod test {
 
     #[test]
     fn test_dey_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA0, 0x02, // LDY #$02
             0x88, // DEY
@@ -1619,7 +1619,7 @@ mod test {
 
     #[test]
     fn test_eor_immediate() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x55, // LDA #$55
             0x49, 0xAA, // EOR #$AA
@@ -1632,7 +1632,7 @@ mod test {
 
     #[test]
     fn test_inc_zeropage() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x01, // LDA #$01
             0x8D, 0x10, 0x00, // STA $10
@@ -1657,7 +1657,7 @@ mod test {
 
     #[test]
     fn test_iny_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA0, 0x01, // LDY #$01
             0xC8, // INY
@@ -1670,7 +1670,7 @@ mod test {
 
     #[test]
     fn test_jmp_absolute() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         let mut program = vec![0; 4099];
 
         // JMP $9000
@@ -1695,7 +1695,7 @@ mod test {
 
     #[test]
     fn test_jsr_absolute() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         let mut program: Vec<u8> = vec![0; 4099];
 
         // JSR $9000
@@ -1751,7 +1751,7 @@ mod test {
 
     #[test]
     fn test_lda_absolute_y() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA0, 0x10, // LDY #$10
             0xA9, 0x42, // LDA #$42
@@ -1850,7 +1850,7 @@ mod test {
 
     #[test]
     fn test_nop_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xEA, // NOP
             0xEA, // NOP
@@ -1865,7 +1865,7 @@ mod test {
 
     #[test]
     fn test_ora() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x00, // LDA #$0F
             0x09, 0xFF, // ORA #$F0
@@ -1942,7 +1942,7 @@ mod test {
 
     #[test]
     fn test_ror_accumulator() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
 
         cpu.load_and_run(&[
             0xA9, 0x02, // LDA #$02  ; 0b0000_0010
@@ -1968,7 +1968,7 @@ mod test {
 
     #[test]
     fn test_sbc_immediate() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x10, // LDA #$10
             0xE9, 0x05, // SBC #$05
@@ -2058,7 +2058,7 @@ mod test {
 
     #[test]
     fn test_tay_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA9, 0x42, // LDA #$42
             0xA8, // TAY
@@ -2069,7 +2069,7 @@ mod test {
 
     #[test]
     fn test_tsx_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0x9A, // TXS (initialize stack pointer)
             0xBA, // TSX
@@ -2080,7 +2080,7 @@ mod test {
 
     #[test]
     fn test_txa_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA2, 0x42, // LDX #$42
             0x8A, // TXA
@@ -2091,7 +2091,7 @@ mod test {
 
     #[test]
     fn test_txs_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA2, 0x42, // LDX #$42
             0x9A, // TXS
@@ -2102,7 +2102,7 @@ mod test {
 
     #[test]
     fn test_tya_implied() {
-        let mut cpu: CPU = CPU::new();
+        let mut cpu = CPU::new();
         cpu.load_and_run(&[
             0xA0, 0x42, // LDY #$42
             0x98, // TYA
