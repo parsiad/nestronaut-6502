@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 paste = "1.0"
+sdl2 = "0.37.0"
+rand = "0.9.1"

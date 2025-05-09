@@ -15,3 +15,15 @@ cpu.load_and_run(&[
   0x00 // BRK
 ]);
 ```
+
+## Snake Game
+
+The snake game from [Easy 6502](https://skilldrick.github.io/easy6502/#snake) can be run with
+
+```
+cargo run snake
+```
+
+The SDL code for rendering the game is from [Writing NES Emulator in Rust](https://bugzmanov.github.io/nes_ebook/chapter_3_4.html).
+
+![](https://bugzmanov.github.io/nes_ebook/images/ch3/snk_game.gif)

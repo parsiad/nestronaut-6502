@@ -217,7 +217,7 @@ impl CPU {
     }
 }
 
-trait MemRead<A, V> {
+pub trait MemRead<A, V> {
     fn mem_read(&self, addr: A) -> V;
 }
 
@@ -225,7 +225,7 @@ trait MemReadNext<V> {
     fn mem_read_next(&mut self) -> V;
 }
 
-trait MemWrite<A, V> {
+pub trait MemWrite<A, V> {
     fn mem_write(&mut self, addr: A, value: V);
 }
 
@@ -1116,8 +1116,9 @@ make_addressing_modes!(sty, write, zeropage, zeropage_x, absolute);
 macro_rules! make_run {
     ($(($name:ident, $opcode:expr)),*) => {
         impl CPU {
-            fn run(&mut self) {
+            pub fn run_with_callback<F>(&mut self, mut callback: F) where F: FnMut(&mut CPU) {
                 loop {
+                    callback(self);
                     let opcode: u8 = self.mem_read_next();
                     match opcode {
                         0x00 => break,  // BRK
@@ -1290,25 +1291,32 @@ impl CPU {
         Self::default()
     }
 
-    pub fn load_and_run(&mut self, program: &[u8]) {
-        self.load(program);
-        self.reset();
-        self.run();
+    pub fn load(&mut self, program: &[u8], program_start_addr: Option<u16>) {
+        let program_start_addr = program_start_addr.unwrap_or(CPU::PROGRAM_START);
+        let program_start_addr_as_usize = program_start_addr as usize;
+        self.memory[program_start_addr_as_usize..(program_start_addr_as_usize + program.len())]
+            .copy_from_slice(program);
+        self.mem_write(0xFFFCu16, program_start_addr);
     }
 
-    fn load(&mut self, program: &[u8]) {
-        let program_start = CPU::PROGRAM_START as usize;
-        self.memory[program_start..(program_start + program.len())].copy_from_slice(program);
-        self.mem_write(0xFFFCu16, CPU::PROGRAM_START);
-    }
-
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.processor_status = CPU::INIT_PROCESSOR_STATUS;
         self.program_counter = self.mem_read(0xFFFCu16);
         self.register_a = 0;
         self.register_x = 0;
         self.register_y = 0;
         self.stack_pointer = CPU::INIT_STACK_POINTER;
+    }
+
+    pub fn run(&mut self) {
+        self.run_with_callback(|_| {});
+    }
+
+    #[cfg(test)]
+    fn load_reset_run(&mut self, program: &[u8]) {
+        self.load(program, Some(CPU::PROGRAM_START));
+        self.reset();
+        self.run();
     }
 }
 
@@ -1320,7 +1328,7 @@ mod test {
     fn test_adc_immediate() {
         let mut cpu = CPU::new();
 
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x10, // LDA #$10
             0x69, 0x05, // ADC #$05
             0x00, // BRK
@@ -1330,7 +1338,7 @@ mod test {
         assert!(!cpu.is_zero_flag_on());
         assert!(!cpu.is_negative_flag_on());
 
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0xA9, 0xF0, // LDA #$10
             0x69, 0x0F, // ADC #$05
@@ -1345,7 +1353,7 @@ mod test {
     #[test]
     fn test_and_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0xF0, // LDA #$F0
             0x29, 0x0F, // AND #$0F
             0x00, // BRK
@@ -1358,7 +1366,7 @@ mod test {
     #[test]
     fn test_asl_absolute() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x40, // LDA #$40
             0x8D, 0x00, 0x20, // STA $2000
             0x0E, 0x00, 0x20, // ASL $2000
@@ -1374,7 +1382,7 @@ mod test {
     #[test]
     fn test_bcc_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0x90, 0x02, // BCC +2
             0xA9, 0x01, // LDA #$01
@@ -1389,7 +1397,7 @@ mod test {
     #[test]
     fn test_bcs_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x18, // CLC
             0xB0, 0x02, // BCS +2
             0xA9, 0x01, // LDA #$01
@@ -1404,7 +1412,7 @@ mod test {
     #[test]
     fn test_beq_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x01, // LDA #$01
             0xC9, 0x01, // CMP #$01
             0xF0, 0x02, // BEQ +2
@@ -1417,7 +1425,7 @@ mod test {
     #[test]
     fn test_bit_zeropage() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0xF0, // LDA #$F0
             0x8D, 0x10, 0x00, // STA $0010
             0xA9, 0x0F, // LDA #$0F
@@ -1433,7 +1441,7 @@ mod test {
     #[test]
     fn test_bmi_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x80, // LDA #$80
             0x30, 0x02, // BMI +2
             0xA9, 0x02, // LDA #$02
@@ -1445,7 +1453,7 @@ mod test {
     #[test]
     fn test_bne_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x01, // LDA #$01
             0xD0, 0x02, // BNE +2
             0xA9, 0x00, // LDA #$00
@@ -1457,7 +1465,7 @@ mod test {
     #[test]
     fn test_bpl_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x10, // LDA #$10
             0x10, 0x02, // BPL +2
             0xA9, 0x02, // LDA #$02
@@ -1469,7 +1477,7 @@ mod test {
     #[test]
     fn test_bvc_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x69, 0x10, // ADC #$10
             0x50, 0x02, // BVC +2
             0xA9, 0x02, // LDA #$02
@@ -1481,7 +1489,7 @@ mod test {
     #[test]
     fn test_bvs_relative() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x7F, // LDA #$7F
             0x69, 0x01, // ADC #$01
             0x70, 0x02, // BVS +2
@@ -1494,7 +1502,7 @@ mod test {
     #[test]
     fn test_clc_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0x18, // CLC
             0x00, // BRK
@@ -1505,7 +1513,7 @@ mod test {
     #[test]
     fn test_cld_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xF8, // SED
             0xD8, // CLD
             0x00, // BRK
@@ -1516,7 +1524,7 @@ mod test {
     #[test]
     fn test_cli_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x78, // SEI
             0x58, // CLI
             0x00, // BRK
@@ -1527,7 +1535,7 @@ mod test {
     #[test]
     fn test_clv_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x7F, // LDA #$7F
             0x69, 0x01, // ADC #$01
             0xB8, // CLV
@@ -1539,7 +1547,7 @@ mod test {
     #[test]
     fn test_cmp_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x42, // LDA #$42
             0xC9, 0x42, // CMP #$42
             0x00, // BRK
@@ -1552,7 +1560,7 @@ mod test {
     #[test]
     fn test_cpx_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x10, // LDX #$10
             0xE0, 0x08, // CPX #$08
             0x00, // BRK
@@ -1565,7 +1573,7 @@ mod test {
     #[test]
     fn test_cpy_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x05, // LDY #$05
             0xC0, 0x08, // CPY #$08
             0x00, // BRK
@@ -1578,7 +1586,7 @@ mod test {
     #[test]
     fn test_dec_absolute() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x02, // LDA #$02
             0x8D, 0x10, 0x00, // STA $0010
             0xCE, 0x10, 0x00, // DEC $0010
@@ -1593,7 +1601,7 @@ mod test {
     #[test]
     fn test_dex_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x00, // LDX #0
             0xCA, // DEX
             0x00, // BRK
@@ -1606,7 +1614,7 @@ mod test {
     #[test]
     fn test_dey_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x02, // LDY #$02
             0x88, // DEY
             0x88, // DEY
@@ -1620,7 +1628,7 @@ mod test {
     #[test]
     fn test_eor_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x55, // LDA #$55
             0x49, 0xAA, // EOR #$AA
             0x00, // BRK
@@ -1633,7 +1641,7 @@ mod test {
     #[test]
     fn test_inc_zeropage() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x01, // LDA #$01
             0x8D, 0x10, 0x00, // STA $10
             0xE6, 0x10, // INC $10
@@ -1649,7 +1657,7 @@ mod test {
         let mut cpu = CPU::new();
         let mut program = vec![0xE8; 257]; // INX ; 257 times for overflow
         program.push(0x00); // BRK
-        cpu.load_and_run(&program);
+        cpu.load_reset_run(&program);
         assert_eq!(cpu.register_x, 1);
         assert!(!cpu.is_zero_flag_on());
         assert!(!cpu.is_negative_flag_on());
@@ -1658,7 +1666,7 @@ mod test {
     #[test]
     fn test_iny_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x01, // LDY #$01
             0xC8, // INY
             0x00, // BRK
@@ -1688,7 +1696,7 @@ mod test {
         // BRK
         program[4098] = 0x00;
 
-        cpu.load_and_run(&program);
+        cpu.load_reset_run(&program);
 
         assert_eq!(cpu.register_a, 0x42);
     }
@@ -1717,7 +1725,7 @@ mod test {
         // RTS
         program[4098] = 0x60;
 
-        cpu.load_and_run(&program);
+        cpu.load_reset_run(&program);
 
         assert_eq!(cpu.register_a, 0x42);
         assert_eq!(cpu.register_x, 0xFF);
@@ -1726,7 +1734,7 @@ mod test {
     #[test]
     fn test_lda_absolute() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x42, // LDX #$42
             0x8E, 0x34, 0x12, // STX $1234
             0xAD, 0x34, 0x12, // LDA $1234
@@ -1738,7 +1746,7 @@ mod test {
     #[test]
     fn test_lda_absolute_x() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x01, // LDX #$01
             0xA9, 0x42, // LDA #$42
             0x9D, 0x00, 0x20, // STA $2000,X
@@ -1752,7 +1760,7 @@ mod test {
     #[test]
     fn test_lda_absolute_y() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x10, // LDY #$10
             0xA9, 0x42, // LDA #$42
             0x99, 0x00, 0x20, // STA $2000,Y
@@ -1767,7 +1775,7 @@ mod test {
     fn test_lda_immediate() {
         let mut cpu = CPU::new();
         let value = (-42i8) as u8;
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, value, // LDA #-42
             0x00,  // BRK
         ]);
@@ -1779,7 +1787,7 @@ mod test {
     #[test]
     fn test_lda_indirect_x() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x04, // LDX #$04,
             0xA9, 0x10, // LDA #$10
             0x85, 0x14, // STA $14
@@ -1796,7 +1804,7 @@ mod test {
     #[test]
     fn test_lda_indirect_y() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x04, // LDY #$04
             0xA9, 0x90, // LDA #$90
             0x85, 0x10, // STA $10
@@ -1813,7 +1821,7 @@ mod test {
     #[test]
     fn test_ldx_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x42, // LDX #$42
             0x00, // BRK
         ]);
@@ -1825,7 +1833,7 @@ mod test {
     #[test]
     fn test_ldy_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x10, // LDY #$10
             0x00, // BRK
         ]);
@@ -1837,7 +1845,7 @@ mod test {
     #[test]
     fn test_lsr_accumulator() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x43, // LDA #$43
             0x4A, // LSR
             0x00, // BRK
@@ -1851,7 +1859,7 @@ mod test {
     #[test]
     fn test_nop_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xEA, // NOP
             0xEA, // NOP
             0x00, // BRK
@@ -1866,7 +1874,7 @@ mod test {
     #[test]
     fn test_ora() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x00, // LDA #$0F
             0x09, 0xFF, // ORA #$F0
             0x00, // BRK
@@ -1879,7 +1887,7 @@ mod test {
     #[test]
     fn test_pha_pla_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x42, // LDA #$42
             0x48, // PHA
             0xA9, 0xFF, // LDA #$FF
@@ -1896,7 +1904,7 @@ mod test {
     #[test]
     fn test_php_plp_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0xF8, // SED
             0x78, // SEI
@@ -1918,7 +1926,7 @@ mod test {
     fn test_rol_accumulator() {
         let mut cpu = CPU::new();
 
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x40, // LDA #$40  ; 0b0100_0000
             0x2A, // ROL A  ; 0b1000_0000
             0x00, // BRK
@@ -1928,7 +1936,7 @@ mod test {
         assert!(cpu.is_negative_flag_on());
         assert!(!cpu.is_carry_flag_on());
 
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0xA9, 0x40, // LDA #$40  ; 0b0100_0000
             0x2A, // ROL A  ; 0b1000_0001
@@ -1944,7 +1952,7 @@ mod test {
     fn test_ror_accumulator() {
         let mut cpu = CPU::new();
 
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x02, // LDA #$02  ; 0b0000_0010
             0x6A, // ROR A  ; 0b0000_0001
             0x00, // BRK
@@ -1954,7 +1962,7 @@ mod test {
         assert!(!cpu.is_negative_flag_on());
         assert!(!cpu.is_carry_flag_on());
 
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0xA9, 0x02, // LDA #$02  ; 0b0000_0010
             0x6A, // ROR A  ; 0b1000_0001
@@ -1969,7 +1977,7 @@ mod test {
     #[test]
     fn test_sbc_immediate() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x10, // LDA #$10
             0xE9, 0x05, // SBC #$05
             0x00, // BRK
@@ -1983,7 +1991,7 @@ mod test {
     #[test]
     fn test_sec() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x38, // SEC
             0x00, // BRK
         ]);
@@ -1993,7 +2001,7 @@ mod test {
     #[test]
     fn test_sed() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xF8, // SED
             0x00, // BRK
         ]);
@@ -2003,7 +2011,7 @@ mod test {
     #[test]
     fn test_sei() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x78, // SEI
             0x00, // BRK
         ]);
@@ -2013,7 +2021,7 @@ mod test {
     #[test]
     fn test_sta_zeropage() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x42, // LDA #$42
             0x85, 0x10, // STA $10
             0x00, // BRK
@@ -2024,7 +2032,7 @@ mod test {
     #[test]
     fn test_stx_zeropage_y() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x42, // LDX #$42
             0xA0, 0x05, // LDY #$05
             0x96, 0x10, // STX $10,Y
@@ -2036,7 +2044,7 @@ mod test {
     #[test]
     fn test_sty_zeropage_x() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x42, // LDY #$42
             0xA2, 0x02, // LDX #$02
             0x94, 0x10, // STY $10,X
@@ -2048,7 +2056,7 @@ mod test {
     #[test]
     fn test_tax_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x42, // LDX #42
             0xAA, // TAX
             0x00, // BRK
@@ -2059,7 +2067,7 @@ mod test {
     #[test]
     fn test_tay_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA9, 0x42, // LDA #$42
             0xA8, // TAY
             0x00, // BRK
@@ -2070,7 +2078,7 @@ mod test {
     #[test]
     fn test_tsx_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0x9A, // TXS (initialize stack pointer)
             0xBA, // TSX
             0x00, // BRK
@@ -2081,7 +2089,7 @@ mod test {
     #[test]
     fn test_txa_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x42, // LDX #$42
             0x8A, // TXA
             0x00, // BRK
@@ -2092,7 +2100,7 @@ mod test {
     #[test]
     fn test_txs_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA2, 0x42, // LDX #$42
             0x9A, // TXS
             0x00, // BRK
@@ -2103,7 +2111,7 @@ mod test {
     #[test]
     fn test_tya_implied() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(&[
+        cpu.load_reset_run(&[
             0xA0, 0x42, // LDY #$42
             0x98, // TYA
             0x00, // BRK
